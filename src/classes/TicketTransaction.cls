@@ -1,5 +1,4 @@
-//Controller for the Page - TicketSales.
-
+//Controller for the Page - TicketSales. Modified
 /*
 Assumptions - 
 
@@ -19,7 +18,7 @@ Purchase -
 	
 Refund - 
 	Only Tickets with 'Purchased' Status can be Refunded.	
-			
+
 */
 
 public with sharing class TicketTransaction 
