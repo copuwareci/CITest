@@ -1,0 +1,14 @@
+<project name="Salesforce" default="test" basedir="." xmlns:sf="antlib:com.salesforce">
+
+    <property file="build.properties"/>
+    <property environment="env"/>
+    <!-- Test out deploy and retrieve verbs for package 'mypkg' -->
+    <target name="deployRunAllTests">
+      <sf:deploy username="${sf.username}" password="${sf.password}" serverurl="${sf.serverurl}" runAllTests="true" logtype="Detail" deployRoot="src"/>
+    </target>
+
+    <target name="undeployCode">
+      <sf:deploy username="${sf.username}" password="${sf.password}" serverurl="${sf.serverurl}" deployRoot="undeploy"/>
+    </target>
+    
+</project>
