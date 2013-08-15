@@ -176,6 +176,10 @@
         <object>Venue__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
+    <pageAccesses>
+        <apexPage>TicketSales</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
     <tabVisibilities>
         <tab>Consumer__c</tab>
         <visibility>DefaultOn</visibility>

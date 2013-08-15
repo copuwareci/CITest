@@ -1,0 +1,173 @@
+<apex:page standardController="Ticket__c" extensions="TicketTransaction" tabStyle="Performance__c" showheader="false" sidebar="false" id="pg">
+
+    <style type="text/css">
+      .loadingIcon 
+            {
+            background-image: url(/img/loading.gif);
+            width: 16px;
+            height: 16px;
+            }
+     </style>
+      
+    <apex:form id="frm">
+        <apex:pageBlock id="pbBlock">
+            <apex:sectionHeader title="Ticket Sales" id="secHeader"/>
+            <apex:pageMessages />
+            
+             <!-- Consumer Info -->
+            <apex:pageBlockSection title="Consumer Details" columns="1" collapsible="false" id="consumerDetails">
+                <apex:outputText label="First Name" value="{!Consumer.First_Name__c}"/>
+                <apex:outputText label="Last Name" value="{!Consumer.Last_Name__c}"/>
+                <apex:outputText label="Consumer Number" value="{!Consumer.Name}"/>
+                <apex:outputText label="Total of Future Purchases" value="${!FuturePurchasesAmount}"> </apex:outputText>
+                <apex:outputText label="Total of Future Held" value="${!FutureHeldAmount}"> </apex:outputText>
+            </apex:pageBlockSection>
+            
+            <!-- Performance Filter --> 
+            <apex:actionRegion >            
+                <apex:pageBlockSection title="Performance Filter" collapsible="true" id="performanceFilter">
+                    <apex:inputField value="{!Ticket__c.Performance__c}" required="false">
+                        <apex:actionSupport event="onchange" action="{!performanceDetails}" reRender="performanceFilter" status="loading"/>
+                    </apex:inputField>
+                    <apex:outputtext label="Start Date/Time" value="{!sformateddate}"/>
+                    <apex:pageBlockSectionItem >
+                        <apex:outputtext />
+                        <apex:commandButton value="Find Tickets" reRender="pbBlock" action="{!findTickets}">
+                        </apex:commandButton>   
+                    </apex:pageBlockSectionItem>
+                </apex:pageBlockSection>
+            </apex:actionRegion>
+            
+            <!-- Button set for the ticket actions -->  
+            <apex:pageBlockSection title="Tickets" collapsible="false" columns="1" id="tickets">
+                <apex:outputPanel layout="block" id="buttonset">
+                    <apex:commandButton value="Reserve" action="{!reserve}" reRender="pbBlock"/>
+                    <apex:commandButton value="Release" action="{!release}" reRender="pbBlock"/>
+                    <apex:commandButton value="Purchase" action="{!purchase}" reRender="pbBlock"/>
+                    <apex:commandButton value="Return" action="{!returntickets}" reRender="pbBlock"/>
+                    <apex:commandButton value="Back to Consumer" action="{!backtoconsumer}"/>
+                </apex:outputPanel>
+            </apex:pageBlockSection>
+            
+             <!-- Default view for the Consumer's purchased and reserved tickets for future performances -->  
+            <apex:pageBlockSection columns="1">
+                <!-- Consumer Default view Output Panel Starts-->    
+                <apex:outputpanel id="datatable" rendered ="{!!performanceSelected && IF(ConsumerTickets.size > 0 , true , false)}"> 
+
+                    <apex:actionStatus id="stat">
+                        <apex:facet name="start"> 
+                            <apex:outputPanel layout="block" styleClass="message infoM4">
+                                <apex:panelGrid columns="2" styleClass="messageTable" columnClasses="messageCell" style="padding:0px;margin:0px;">
+                                    <apex:panelGroup >
+                                        <img class="loadingIcon" src="/s.gif"/>
+                                    </apex:panelGroup>
+                                    <apex:panelGroup >
+                                        <div class="messageText">Please wait...</div>
+                                    </apex:panelGroup>
+                                </apex:panelGrid>
+                            </apex:outputPanel>
+                        </apex:facet>
+                        <apex:facet name="stop">
+
+                            <!-- Default view page block table -->
+                            <apex:pageBlockTable value="{!ConsumerTickets}" var="t" id="pbTable">
+                                <apex:column >
+                                    <apex:facet name="header">
+                                        <apex:inputcheckbox selected="{!selectall}">
+                                            <apex:actionSupport event="onchange" action="{!toggleSelection}" reRender="pbTable"/>
+                                        </apex:inputcheckbox>
+                                    </apex:facet>
+                                    <apex:inputCheckbox value="{!t.checked}">
+                                        <apex:actionSupport event="onchange"  reRender="pbTable"/>
+                                    </apex:inputCheckbox>
+                                </apex:column> 
+                                <apex:column value="{!t.ticket.Performance__c}"/>
+                                <apex:column value="{!t.ticket.Cost__c}"/>
+                                <apex:column value="{!t.ticket.Seat__r.Row__c}"/>
+                                <apex:column value="{!t.ticket.Seat__r.Seat_Number__c}"/>
+                                <apex:column headerValue="Venue" value="{!t.ticket.Performance__r.Venue__r.Name}"/>
+                                <apex:column value="{!t.ticket.Status__c}"/>
+                            </apex:pageBlockTable>
+                        </apex:facet>
+                    </apex:actionStatus>
+            
+                    <!-- Pagination for the default view -->  
+                    <div align="center">
+                        <apex:panelGrid columns="5" id="pagination" rendered="{!!performanceSelected}" style="text-align: center; padding:10px;">
+                            <apex:commandLink reRender="datatable, pagination" value="<< First" action="{!first}" title="First Page" status="stat"/>
+                            <apex:commandLink rendered="{!standardsetcon.hasprevious}" reRender="datatable, pagination" value="< Previous" action="{!previous}" title="Previous Page" status="stat"/>
+                            <apex:outputText >Page {!pageNumber} of {!totalPages}</apex:outputText>
+                            <apex:commandLink rendered="{!standardsetcon.hasnext}" reRender="datatable, pagination" value="Next >" action="{!next}" title="Next Page" status="stat"/>
+                            <apex:commandLink reRender="datatable, pagination" value="Last >>" action="{!last}" title="Last Page" status="stat"/>
+                        </apex:panelGrid>
+                    </div>    
+                </apex:outputpanel>
+                <!-- Consumer Default view Output Panel Ends-->    
+                
+                <!-- Message block for the default view, if there are no tickets available for the future performance -->
+                <apex:outputpanel id="messageTable" rendered="{!!performanceSelected && IF(ConsumerTickets.size < 1 , true , false)}"> 
+                    <apex:outputText value="No Reserved or Purchased Tickets available for the User." />
+                </apex:outputpanel>
+
+                <!-- Performance Ticket selection Output Panel Starts-->   
+                <apex:outputpanel id="performancetable" rendered="{!performanceSelected && IF(PerformanceTickets.size > 0 , true , false)}" >
+                     
+                    
+                    <apex:actionStatus id="stat2">
+                        <apex:facet name="start"> 
+                            <apex:outputPanel layout="block" styleClass="message infoM4">
+                                <apex:panelGrid columns="2" styleClass="messageTable" columnClasses="messageCell" style="padding:0px;margin:0px;">
+                                    <apex:panelGroup >
+                                        <img class="loadingIcon" src="/s.gif"/>
+                                    </apex:panelGroup>
+                                    <apex:panelGroup >
+                                        <div class="messageText">Please wait...</div>
+                                    </apex:panelGroup>
+                                </apex:panelGrid>
+                            </apex:outputPanel>
+                        </apex:facet>
+                        <apex:facet name="stop">
+                        
+                            <!-- Selected performance page block table -->                     
+                            <apex:pageBlockTable value="{!PerformanceTickets}" var="t" id="pbPerformanceTable">
+                                <apex:column >
+                                    <apex:facet name="header">
+                                        <apex:inputcheckbox selected="{!selectall}">
+                                            <apex:actionSupport event="onchange" action="{!toggleSelection}" reRender="pbPerformanceTable"/>
+                                        </apex:inputcheckbox>
+                                    </apex:facet>
+                                    <apex:inputCheckbox value="{!t.checked}">
+                                        <apex:actionSupport event="onchange"  reRender="pbPerformanceTable"/>
+                                    </apex:inputCheckbox>
+                                </apex:column>
+                                <apex:column value="{!t.ticket.Cost__c}"/>
+                                <apex:column value="{!t.ticket.Seat__r.Row__c}"/>
+                                <apex:column value="{!t.ticket.Seat__r.Seat_Number__c}"/>
+                                <apex:column headerValue="Venue" value="{!t.ticket.Performance__r.Venue__r.Name}"/>
+                                <apex:column value="{!t.ticket.Status__c}"/>
+                            </apex:pageBlockTable>
+
+                        </apex:facet>
+                    </apex:actionStatus>
+                                        
+                    <!-- Pagination for the selected Performance tickets --> 
+                    <div align="center">
+                        <apex:panelGrid columns="5" id="performancetablepagination" rendered="{!performanceSelected}">
+                            <apex:commandLink reRender="performancetable,performancetablepagination" value="<< First" action="{!first}" title="First Page" status="stat2"/>
+                            <apex:commandLink rendered="{!standardsetcon.hasprevious}" reRender="performancetable,performancetablepagination" value="< Previous" action="{!previous}" title="Previous Page" status="stat2"/>
+                            <apex:outputText >Page {!pageNumber} of {!totalPages}</apex:outputText>
+                            <apex:commandLink rendered="{!standardsetcon.hasnext}" reRender="performancetable,performancetablepagination" value="Next >" action="{!next}" title="Next Page" status="stat2"/>
+                            <apex:commandLink reRender="performancetable,performancetablepagination" value="Last >>" action="{!last}" title="Last Page" status="stat2"/>
+                        </apex:panelGrid>
+                    </div>
+                </apex:outputpanel>
+                <!-- Performance Ticket selection Output Panel Ends -->   
+                
+                <!-- Message block for the selected performance if there are no tickets available for the Selected performance -->
+                <apex:outputpanel id="performanceMessageTable" rendered="{!performanceSelected && IF(PerformanceTickets.size < 1 , true , false)}"> 
+                    <apex:outputText value="No Tickets available for the selected performance." />
+                </apex:outputpanel>
+             </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>
