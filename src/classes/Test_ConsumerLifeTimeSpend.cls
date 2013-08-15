@@ -1,9 +1,5 @@
 /*
 Test Class for the ConsumerLifeTimeSpend Trigger
-
-<><>
-
-Making some change inorder to make a commit.
 */
 @isTest
 private class Test_ConsumerLifeTimeSpend
